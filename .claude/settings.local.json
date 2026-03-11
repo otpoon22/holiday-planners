@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/opt/homebrew/bin/brew install:*)",
+      "Bash(curl -fsSL https://nodejs.org/dist/v22.14.0/node-v22.14.0.pkg -o /tmp/node.pkg 2>&1 && echo \"DOWNLOADED\")",
+      "Bash(npm run:*)",
+      "Bash(rm -rf node_modules package-lock.json && npm install 2>&1)"
+    ]
+  }
+}
