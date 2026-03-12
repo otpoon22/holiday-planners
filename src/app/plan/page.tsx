@@ -7,7 +7,6 @@ import {
   Plane,
   MapPin,
   CalendarDays,
-  Clock,
   Compass,
   Utensils,
   Camera,
@@ -18,8 +17,6 @@ import {
   ExternalLink,
   ArrowRight,
   Search,
-  Minus,
-  Plus,
   Sparkles,
   Check,
   Waves,
@@ -148,8 +145,8 @@ export default function PlanPage() {
   const [destinationQuery, setDestinationQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [numDays, setNumDays] = useState(5);
+  const [departureDate, setDepartureDate] = useState("");
+  const [returnDate, setReturnDate] = useState("");
   const [prefTime, setPrefTime] = useState("morning");
   const [cabinClass, setCabinClass] = useState("economy");
   const [flightFilter, setFlightFilter] = useState("all");
@@ -231,7 +228,7 @@ export default function PlanPage() {
   };
 
   const handleGenerate = async () => {
-    if (!selectedCity || !selectedCountry || !startDate || !departureAirport) return;
+    if (!selectedCity || !selectedCountry || !departureDate || !returnDate || !departureAirport || numDays < 2) return;
 
     setLoading(true);
     setError("");
@@ -243,7 +240,7 @@ export default function PlanPage() {
         city: selectedCity,
         country: selectedCountry,
         from: departureAirport,
-        startDate,
+        startDate: departureDate,
         days: numDays.toString(),
         prefTime,
         cabinClass,
@@ -280,7 +277,12 @@ export default function PlanPage() {
 
   const collapseAll = () => setExpandedDays(new Set());
 
-  const isFormComplete = selectedCity && selectedCountry && startDate && departureAirport;
+  // Compute trip duration from dates
+  const numDays = departureDate && returnDate
+    ? Math.max(2, Math.min(21, Math.round((new Date(returnDate).getTime() - new Date(departureDate).getTime()) / 86400000) + 1))
+    : 0;
+
+  const isFormComplete = selectedCity && selectedCountry && departureDate && returnDate && departureAirport && numDays >= 2;
   const allExpanded = result ? expandedDays.size === result.itinerary.length : false;
 
   return (
@@ -306,11 +308,11 @@ export default function PlanPage() {
       {/* ── Form ── */}
       <section className="max-w-4xl mx-auto px-6 -mt-8 relative z-20">
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 md:p-8">
-          {/* Departure Airport */}
+          {/* Departure */}
           <div className="relative mb-6">
             <label className="block text-sm font-semibold text-foreground mb-2">
               <Plane className="w-4 h-4 inline mr-2 text-teal" />
-              Departure Airport
+              Departure
             </label>
             <input
               type="text"
@@ -343,7 +345,7 @@ export default function PlanPage() {
             <div className="relative">
               <label className="block text-sm font-semibold text-foreground mb-2">
                 <Compass className="w-4 h-4 inline mr-2 text-warm" />
-                Destination City
+                Destination
               </label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -412,31 +414,33 @@ export default function PlanPage() {
               </label>
               <input
                 type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                value={departureDate}
+                onChange={(e) => {
+                  setDepartureDate(e.target.value);
+                  // Auto-clear return date if it's before the new departure
+                  if (returnDate && e.target.value > returnDate) setReturnDate("");
+                }}
                 min={new Date().toISOString().split("T")[0]}
                 className="w-full px-4 py-3.5 rounded-xl bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-warm/30 focus:border-warm transition-all text-foreground"
               />
             </div>
 
-            {/* Duration */}
+            {/* Return Date */}
             <div>
               <label className="block text-sm font-semibold text-foreground mb-2">
-                <Clock className="w-4 h-4 inline mr-2 text-primary" />
-                Duration
+                <CalendarDays className="w-4 h-4 inline mr-2 text-primary" />
+                Return Date
               </label>
-              <div className="flex items-center gap-3">
-                <button onClick={() => setNumDays((d) => Math.max(2, d - 1))} className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors">
-                  <Minus className="w-4 h-4 text-gray-600" />
-                </button>
-                <div className="flex-1 text-center">
-                  <span className="text-3xl font-bold text-foreground">{numDays}</span>
-                  <span className="text-sm text-gray-400 ml-2">days</span>
-                </div>
-                <button onClick={() => setNumDays((d) => Math.min(21, d + 1))} className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors">
-                  <Plus className="w-4 h-4 text-gray-600" />
-                </button>
-              </div>
+              <input
+                type="date"
+                value={returnDate}
+                onChange={(e) => setReturnDate(e.target.value)}
+                min={departureDate || new Date().toISOString().split("T")[0]}
+                className="w-full px-4 py-3.5 rounded-xl bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-foreground"
+              />
+              {numDays >= 2 && (
+                <p className="text-xs text-gray-400 mt-1.5">{numDays} days</p>
+              )}
             </div>
           </div>
 
