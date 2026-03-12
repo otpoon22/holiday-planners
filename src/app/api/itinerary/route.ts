@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
   const days = parseInt(request.nextUrl.searchParams.get("days") || "5");
   const prefTime = request.nextUrl.searchParams.get("prefTime") || "morning";
   const cabinClass = request.nextUrl.searchParams.get("cabinClass") || "economy";
+  const flightIdx = parseInt(request.nextUrl.searchParams.get("flightIdx") || "0");
 
   if (!city || !country) {
     return NextResponse.json({ error: "City and country required" }, { status: 400 });
@@ -91,9 +92,10 @@ export async function GET(request: NextRequest) {
     ]);
 
     const flights = generateFlightOptions(departureCity, city, country, startDate, days, prefTime, cabinClass, lat, lon);
-    const itinerary = buildItinerary(city, country, sights, food, photos, excursions, flights[0], startDate, days);
+    const selectedIdx = Math.min(Math.max(0, flightIdx), flights.length - 1);
+    const itinerary = buildItinerary(city, country, sights, food, photos, excursions, flights[selectedIdx], startDate, days);
 
-    return NextResponse.json({ flights, itinerary, city, country });
+    return NextResponse.json({ flights, itinerary, city, country, selectedFlightIdx: selectedIdx });
   } catch (err) {
     console.error("Itinerary error:", err);
     return NextResponse.json({ error: "Failed to generate itinerary", detail: String(err) }, { status: 500 });

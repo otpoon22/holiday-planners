@@ -167,6 +167,7 @@ export default function PlanPage() {
   const [result, setResult] = useState<ItineraryResult | null>(null);
   const [selectedFlightId, setSelectedFlightId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [rebuildingItinerary, setRebuildingItinerary] = useState(false);
   const [error, setError] = useState("");
   const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set([1]));
   const [expandedFlights, setExpandedFlights] = useState<Set<string>>(new Set());
@@ -267,6 +268,40 @@ export default function PlanPage() {
       setError("Something went wrong generating your itinerary. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Rebuild itinerary when user picks a different flight
+  const handleFlightSelect = async (flightId: string) => {
+    if (!result || flightId === selectedFlightId) return;
+    setSelectedFlightId(flightId);
+
+    // Find the index of this flight in the original (unsorted) result
+    const flightIndex = result.flights.findIndex((f) => f.id === flightId);
+    if (flightIndex < 0) return;
+
+    setRebuildingItinerary(true);
+    try {
+      const params = new URLSearchParams({
+        city: result.city,
+        country: result.country,
+        from: departureAirport,
+        startDate: departureDate,
+        days: numDays.toString(),
+        prefTime,
+        cabinClass,
+        flightIdx: flightIndex.toString(),
+      });
+      const res = await fetch(`/api/itinerary?${params}`);
+      if (!res.ok) throw new Error("Failed to rebuild");
+      const data = await res.json();
+      // Only update itinerary, keep existing flights
+      setResult((prev) => prev ? { ...prev, itinerary: data.itinerary } : prev);
+      setExpandedDays(new Set([1]));
+    } catch {
+      // Silently fail — keep the old itinerary
+    } finally {
+      setRebuildingItinerary(false);
     }
   };
 
@@ -658,10 +693,10 @@ export default function PlanPage() {
                         {/* Select flight button */}
                         {!isSelected && (
                           <button
-                            onClick={() => setSelectedFlightId(flight.id)}
+                            onClick={() => handleFlightSelect(flight.id)}
                             className="mb-4 px-4 py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
                           >
-                            Select this flight
+                            {rebuildingItinerary ? "Updating itinerary..." : "Select this flight"}
                           </button>
                         )}
 
@@ -742,6 +777,12 @@ export default function PlanPage() {
           {/* ── Itinerary ── */}
           {resultTab === "itinerary" && (
           <div className="animate-fade-in-up">
+            {rebuildingItinerary && (
+              <div className="flex items-center gap-3 mb-6 p-4 rounded-xl bg-primary/5 border border-primary/10">
+                <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                <p className="text-sm text-primary font-medium">Rebuilding itinerary for your selected flight...</p>
+              </div>
+            )}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
