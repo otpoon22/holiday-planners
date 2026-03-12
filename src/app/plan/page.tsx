@@ -308,39 +308,39 @@ export default function PlanPage() {
       {/* ── Form ── */}
       <section className="max-w-4xl mx-auto px-6 -mt-8 relative z-20">
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 md:p-8">
-          {/* Departure */}
-          <div className="relative mb-6">
-            <label className="block text-sm font-semibold text-foreground mb-2">
-              <Plane className="w-4 h-4 inline mr-2 text-teal" />
-              Departure
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. London Heathrow, JFK, CDG, Singapore Changi..."
-              value={departureAirport}
-              onChange={(e) => { setDepartureAirport(e.target.value); setShowDepartureDropdown(true); }}
-              onFocus={() => setShowDepartureDropdown(true)}
-              onBlur={() => setTimeout(() => setShowDepartureDropdown(false), 200)}
-              className="w-full px-4 py-3.5 rounded-xl bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all text-foreground placeholder:text-gray-400"
-            />
-            {showDepartureDropdown && filteredDepartureAirports.length > 0 && departureAirport.length < 30 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 max-h-48 overflow-y-auto z-30">
-                {filteredDepartureAirports.map((airport) => (
-                  <button
-                    key={airport}
-                    onMouseDown={() => { setDepartureAirport(airport); setShowDepartureDropdown(false); }}
-                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2"
-                  >
-                    <Plane className="w-3.5 h-3.5 text-gray-400" />
-                    {airport}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Row 1: Departure + Destination */}
+          <div className="grid md:grid-cols-2 gap-6 mb-6">
+            {/* Departure */}
+            <div className="relative">
+              <label className="block text-sm font-semibold text-foreground mb-2">
+                <Plane className="w-4 h-4 inline mr-2 text-teal" />
+                Departure
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. London Heathrow, JFK, CDG..."
+                value={departureAirport}
+                onChange={(e) => { setDepartureAirport(e.target.value); setShowDepartureDropdown(true); }}
+                onFocus={() => setShowDepartureDropdown(true)}
+                onBlur={() => setTimeout(() => setShowDepartureDropdown(false), 200)}
+                className="w-full px-4 py-3.5 rounded-xl bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal transition-all text-foreground placeholder:text-gray-400"
+              />
+              {showDepartureDropdown && filteredDepartureAirports.length > 0 && departureAirport.length < 30 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 max-h-48 overflow-y-auto z-30">
+                  {filteredDepartureAirports.map((airport) => (
+                    <button
+                      key={airport}
+                      onMouseDown={() => { setDepartureAirport(airport); setShowDepartureDropdown(false); }}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2"
+                    >
+                      <Plane className="w-3.5 h-3.5 text-gray-400" />
+                      {airport}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
-          {/* Destination + Date Row */}
-          <div className="grid md:grid-cols-2 gap-6">
             {/* Destination */}
             <div className="relative">
               <label className="block text-sm font-semibold text-foreground mb-2">
@@ -405,7 +405,10 @@ export default function PlanPage() {
                 </div>
               )}
             </div>
+          </div>
 
+          {/* Row 2: Departure Date + Return Date */}
+          <div className="grid md:grid-cols-2 gap-6">
             {/* Departure Date */}
             <div>
               <label className="block text-sm font-semibold text-foreground mb-2">
@@ -417,11 +420,10 @@ export default function PlanPage() {
                 value={departureDate}
                 onChange={(e) => {
                   setDepartureDate(e.target.value);
-                  // Auto-clear return date if it's before the new departure
                   if (returnDate && e.target.value > returnDate) setReturnDate("");
                 }}
                 min={new Date().toISOString().split("T")[0]}
-                className="w-full px-4 py-3.5 rounded-xl bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-warm/30 focus:border-warm transition-all text-foreground"
+                className={`w-full px-4 py-3.5 rounded-xl bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-warm/30 focus:border-warm transition-all ${departureDate ? "text-foreground" : "text-transparent"}`}
               />
             </div>
 
@@ -436,7 +438,7 @@ export default function PlanPage() {
                 value={returnDate}
                 onChange={(e) => setReturnDate(e.target.value)}
                 min={departureDate || new Date().toISOString().split("T")[0]}
-                className="w-full px-4 py-3.5 rounded-xl bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-foreground"
+                className={`w-full px-4 py-3.5 rounded-xl bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all ${returnDate ? "text-foreground" : "text-transparent"}`}
               />
               {numDays >= 2 && (
                 <p className="text-xs text-gray-400 mt-1.5">{numDays} days</p>
