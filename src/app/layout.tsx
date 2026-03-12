@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Voyagr - Plan Your Perfect Holiday",
+  title: "Garden Leavers Travel Guide",
   description: "Explore destinations, find flights, discover food & sightseeing spots",
 };
 
