@@ -150,6 +150,7 @@ export default function PlanPage() {
   const [prefTime, setPrefTime] = useState("morning");
   const [cabinClass, setCabinClass] = useState("economy");
   const [flightFilter, setFlightFilter] = useState("all");
+  const [resultTab, setResultTab] = useState<"flights" | "itinerary" | "summary">("flights");
 
   // Search state
   const [countryResults, setCountryResults] = useState<Country[]>([]);
@@ -250,6 +251,7 @@ export default function PlanPage() {
       const data = await res.json();
       setResult(data);
       setSelectedFlightId(data.flights[0]?.id || null);
+      setResultTab("flights");
       setExpandedDays(new Set([1]));
 
       setTimeout(() => {
@@ -516,7 +518,31 @@ export default function PlanPage() {
       {result && (
         <section id="itinerary-results" className="max-w-5xl mx-auto px-6 py-12 scroll-mt-20">
 
+          {/* ── Tabs ── */}
+          <div className="flex gap-1 bg-gray-100 rounded-2xl p-1 mb-8">
+            {([
+              { key: "flights" as const, label: "Flight Options", icon: Plane },
+              { key: "itinerary" as const, label: "Trip Itinerary", icon: CalendarDays },
+              { key: "summary" as const, label: "Summary & Cost", icon: PoundSterling },
+            ]).map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setResultTab(key)}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold transition-all ${
+                  resultTab === key
+                    ? "bg-white text-foreground shadow-sm"
+                    : "text-gray-400 hover:text-gray-600"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span className="hidden sm:inline">{label}</span>
+                <span className="sm:hidden">{label.split(" ")[0]}</span>
+              </button>
+            ))}
+          </div>
+
           {/* ── Flight Options ── */}
+          {resultTab === "flights" && (
           <div className="mb-12 animate-fade-in-up">
             <h2 className="text-2xl font-bold mb-2 flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-teal/10 flex items-center justify-center">
@@ -666,9 +692,11 @@ export default function PlanPage() {
               })}
             </div>
           </div>
+          )}
 
           {/* ── Itinerary ── */}
-          <div className="animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+          {resultTab === "itinerary" && (
+          <div className="animate-fade-in-up">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -806,9 +834,11 @@ export default function PlanPage() {
               ))}
             </div>
           </div>
+          )}
 
           {/* ── Summary ── */}
-          <div className="mt-10 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
+          {resultTab === "summary" && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-fade-in-up">
             <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
               <Luggage className="w-5 h-5 text-primary" />
               Trip Summary
@@ -846,18 +876,19 @@ export default function PlanPage() {
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Explore More */}
-          <div className="mt-8 text-center">
-            <a
-              href={`/city/${encodeURIComponent(result.city)}?country=${encodeURIComponent(result.country)}`}
-              className="inline-flex items-center gap-2 text-primary hover:text-primary-dark font-semibold transition-colors"
-            >
-              Explore {result.city} in detail
-              <ArrowRight className="w-4 h-4" />
-            </a>
+            {/* Explore More */}
+            <div className="mt-6 text-center">
+              <a
+                href={`/city/${encodeURIComponent(result.city)}?country=${encodeURIComponent(result.country)}`}
+                className="inline-flex items-center gap-2 text-primary hover:text-primary-dark font-semibold transition-colors"
+              >
+                Explore {result.city} in detail
+                <ArrowRight className="w-4 h-4" />
+              </a>
+            </div>
           </div>
+          )}
         </section>
       )}
 
