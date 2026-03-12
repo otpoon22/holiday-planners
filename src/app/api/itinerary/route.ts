@@ -487,6 +487,15 @@ const HALF_DAY_KEYWORDS = /museum|gallery|palace|castle|temple complex|zoo|aquar
 
 type SightDuration = "full_day" | "half_day" | "short";
 
+// Fisher-Yates shuffle — randomises array in place
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 function classifySightDuration(name: string, description: string): SightDuration {
   const text = name + " " + description;
   if (FULL_DAY_KEYWORDS.test(text)) return "full_day";
@@ -508,9 +517,11 @@ function buildItinerary(
     duration: classifySightDuration(s.name, s.description),
   }));
 
-  const fullDaySights = classifiedSights.filter((s) => s.duration === "full_day");
-  const halfDaySights = classifiedSights.filter((s) => s.duration === "half_day");
-  const shortSights = classifiedSights.filter((s) => s.duration === "short");
+  const fullDaySights = shuffle(classifiedSights.filter((s) => s.duration === "full_day"));
+  const halfDaySights = shuffle(classifiedSights.filter((s) => s.duration === "half_day"));
+  const shortSights = shuffle(classifiedSights.filter((s) => s.duration === "short"));
+  shuffle(photos);
+  shuffle(excursions);
 
   // Track usage
   let fullDayIdx = 0;
@@ -537,6 +548,12 @@ function buildItinerary(
   for (const f of food) {
     for (const meal of f.meals) {
       foodByMealAndTier[meal][f.tier].push(f);
+    }
+  }
+  // Shuffle each food bucket so picks are randomised each time
+  for (const meal of ["breakfast", "lunch", "dinner"] as MealType[]) {
+    for (const tier of ["budget", "mid_range", "upscale", "fine_dining"] as TierKey[]) {
+      shuffle(foodByMealAndTier[meal][tier]);
     }
   }
 
