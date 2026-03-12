@@ -327,21 +327,42 @@ function generateFlightOptions(
   const basePrice = isShortHaul ? 80 + Math.abs(seed % 120) : isMediumHaul ? 200 + Math.abs(seed % 250) : 400 + Math.abs(seed % 500);
   const cabinInfo = CABIN_CLASSES[cabinClass] || CABIN_CLASSES.economy;
 
-  // Generate more time slots for more flight options
-  const timeSlots = [
+  // Generate time slots filtered by preferred departure time
+  const allTimeSlots = [
     { depart: "06:00", label: "early" },
     { depart: "07:15", label: "early" },
+    { depart: "07:45", label: "early" },
+    { depart: "08:00", label: "morning" },
     { depart: "08:45", label: "morning" },
+    { depart: "09:30", label: "morning" },
     { depart: "10:10", label: "morning" },
-    { depart: "11:30", label: "midday" },
+    { depart: "10:50", label: "morning" },
+    { depart: "11:30", label: "morning" },
+    { depart: "12:00", label: "afternoon" },
     { depart: "13:00", label: "afternoon" },
     { depart: "14:20", label: "afternoon" },
+    { depart: "15:00", label: "afternoon" },
     { depart: "15:45", label: "afternoon" },
+    { depart: "16:30", label: "afternoon" },
     { depart: "17:30", label: "evening" },
+    { depart: "18:15", label: "evening" },
+    { depart: "19:00", label: "evening" },
     { depart: "19:45", label: "evening" },
+    { depart: "20:30", label: "evening" },
     { depart: "21:15", label: "evening" },
+    { depart: "22:00", label: "evening" },
     { depart: "23:00", label: "evening" },
   ];
+
+  // Map prefTime to which labels to include
+  const prefTimeLabels: Record<string, string[]> = {
+    early: ["early"],
+    morning: ["morning"],
+    afternoon: ["afternoon"],
+    evening: ["evening"],
+  };
+  const allowedLabels = prefTimeLabels[prefTime] || ["morning"];
+  const timeSlots = allTimeSlots.filter((s) => allowedLabels.includes(s.label));
 
   // Filter & rank airlines for this route
   const eligible = getEligibleAirlines(fromCode, toCode, isShortHaul, isMediumHaul);
@@ -370,89 +391,90 @@ function generateFlightOptions(
 
   if (shuffled.length === 0) return [];
 
-  const options: FlightOption[] = timeSlots.map((slot, i) => {
-    const airline = shuffled[i % shuffled.length];
+  // Generate flights: each airline gets multiple time slots
+  const options: FlightOption[] = [];
+  // Limit to top ~8 airlines to keep results manageable
+  const topAirlines = shuffled.slice(0, 8);
 
-    // Mix of direct and transit — short-haul mostly direct, long-haul mix
-    const isDirect = isShortHaul
-      ? (i % 5 !== 4)    // 80% direct for short-haul
-      : isMediumHaul
-        ? (i % 3 !== 2)  // 67% direct for medium-haul
-        : (i % 2 === 0); // 50% direct for long-haul
-    const stops = isDirect ? 0 : 1;
+  for (const airline of topAirlines) {
+    // Each airline gets a subset of time slots (seeded so it's consistent)
+    // Not every airline flies every slot — pick 2-4 per airline
+    const airlineHash = Math.abs(hashCode(airline.name + toCity));
+    const numFlights = 2 + (airlineHash % 3); // 2-4 flights per airline
+    const startOffset = airlineHash % timeSlots.length;
 
-    // Layover time: 1.5-4h with seed-based consistency
-    const layoverHrs = stops > 0 ? 1.5 + (Math.abs(hashCode(airline.name + slot.depart + "lay")) % 25) / 10 : 0;
-    const totalHrs = flightHrs + layoverHrs;
+    for (let j = 0; j < Math.min(numFlights, timeSlots.length); j++) {
+      const slotIdx = (startOffset + Math.floor(j * timeSlots.length / numFlights)) % timeSlots.length;
+      const slot = timeSlots[slotIdx];
+      const i = options.length;
 
-    // Calculate arrival time
-    const [depH, depM] = slot.depart.split(":").map(Number);
-    const arrH = Math.floor(depH + totalHrs) % 24;
-    const arrM = (depM + Math.floor((totalHrs % 1) * 60)) % 60;
-    const arriveTime = `${String(arrH).padStart(2, "0")}:${String(arrM).padStart(2, "0")}`;
+      // Mix of direct and transit
+      const isDirect = isShortHaul
+        ? (j % 5 !== 4)
+        : isMediumHaul
+          ? (j % 3 !== 2)
+          : (j % 2 === 0);
+      const stops = isDirect ? 0 : 1;
 
-    // Duration string
-    const dHrs = Math.floor(totalHrs);
-    const dMins = Math.round((totalHrs % 1) * 60);
-    const duration = `${dHrs}h ${dMins}m`;
+      const layoverHrs = stops > 0 ? 1.5 + (Math.abs(hashCode(airline.name + slot.depart + "lay")) % 25) / 10 : 0;
+      const totalHrs = flightHrs + layoverHrs;
 
-    // Return flight — seed-based for consistency
-    const retDepH = 8 + (Math.abs(hashCode(airline.name + "ret" + i)) % 13); // 8am-9pm
-    const retDepM = Math.abs(hashCode(airline.name + "retm" + i)) % 60;
-    const retArrH = Math.floor(retDepH + totalHrs) % 24;
-    const retArrM = (retDepM + Math.floor((totalHrs % 1) * 60)) % 60;
-    const returnDepart = `${String(retDepH).padStart(2, "0")}:${String(retDepM).padStart(2, "0")}`;
-    const returnArrive = `${String(retArrH).padStart(2, "0")}:${String(retArrM).padStart(2, "0")}`;
+      const [depH, depM] = slot.depart.split(":").map(Number);
+      const arrH = Math.floor(depH + totalHrs) % 24;
+      const arrM = (depM + Math.floor((totalHrs % 1) * 60)) % 60;
+      const arriveTime = `${String(arrH).padStart(2, "0")}:${String(arrM).padStart(2, "0")}`;
 
-    // Price calculation
-    let price = basePrice;
-    if (slot.label === "early") price = Math.round(price * 0.75);
-    if (slot.label === "evening") price = Math.round(price * 0.88);
-    if (slot.label === "morning") price = Math.round(price * 1.1);
-    if (airline.tier === "budget") price = Math.round(price * 0.55);
-    if (airline.tier === "premium") price = Math.round(price * 1.35);
-    if (stops > 0) price = Math.round(price * 0.78);
+      const dHrs = Math.floor(totalHrs);
+      const dMins = Math.round((totalHrs % 1) * 60);
+      const duration = `${dHrs}h ${dMins}m`;
 
-    // Apply cabin class multiplier
-    price = Math.round(price * cabinInfo.multiplier);
+      const retDepH = 8 + (Math.abs(hashCode(airline.name + "ret" + j)) % 13);
+      const retDepM = Math.abs(hashCode(airline.name + "retm" + j)) % 60;
+      const retArrH = Math.floor(retDepH + totalHrs) % 24;
+      const retArrM = (retDepM + Math.floor((totalHrs % 1) * 60)) % 60;
+      const returnDepart = `${String(retDepH).padStart(2, "0")}:${String(retDepM).padStart(2, "0")}`;
+      const returnArrive = `${String(retArrH).padStart(2, "0")}:${String(retArrM).padStart(2, "0")}`;
 
-    // Seed-based jitter for uniqueness
-    price += Math.abs(hashCode(airline.name + slot.depart + cabinClass)) % 60 - 30;
-    price = Math.max(25, price);
+      let price = basePrice;
+      if (slot.label === "early") price = Math.round(price * 0.75);
+      if (slot.label === "evening") price = Math.round(price * 0.88);
+      if (slot.label === "morning") price = Math.round(price * 1.1);
+      if (airline.tier === "budget") price = Math.round(price * 0.55);
+      if (airline.tier === "premium") price = Math.round(price * 1.35);
+      if (stops > 0) price = Math.round(price * 0.78);
+      price = Math.round(price * cabinInfo.multiplier);
+      price += Math.abs(hashCode(airline.name + slot.depart + cabinClass)) % 60 - 30;
+      price = Math.max(25, price);
 
-    const stopCity = stops > 0 ? STOP_CITIES[Math.abs(hashCode(airline.name + toCity + i)) % STOP_CITIES.length] : undefined;
+      const stopCity = stops > 0 ? STOP_CITIES[Math.abs(hashCode(airline.name + toCity + i)) % STOP_CITIES.length] : undefined;
+      const effectiveClass = (airline.tier === "budget" && cabinClass !== "economy") ? "economy" : cabinClass;
+      const effectiveCabinInfo = CABIN_CLASSES[effectiveClass] || CABIN_CLASSES.economy;
+      let baggage = effectiveCabinInfo.baggage;
+      if (airline.tier === "budget" && effectiveClass === "economy") baggage = "Cabin bag only (checked bag extra)";
 
-    // Budget airlines don't offer premium cabins — force economy
-    const effectiveClass = (airline.tier === "budget" && cabinClass !== "economy") ? "economy" : cabinClass;
-    const effectiveCabinInfo = CABIN_CLASSES[effectiveClass] || CABIN_CLASSES.economy;
+      options.push({
+        id: `${airline.code}-${j}`,
+        airline: airline.name,
+        departure: from || "London Heathrow",
+        departureCode: fromCode,
+        arrival: `${toCity}, ${toCountry}`,
+        arrivalCode: toCode,
+        outboundDepart: slot.depart,
+        outboundArrive: arriveTime,
+        returnDepart,
+        returnArrive,
+        duration,
+        stops,
+        stopCity,
+        price,
+        currency: "GBP",
+        class: effectiveCabinInfo.label,
+        baggage,
+        bookingUrl: buildSkyscannerUrl(fromCode, toCode, startDate, returnDateStr, effectiveClass),
+      });
+    }
+  }
 
-    // Baggage depends on airline tier + cabin
-    let baggage = effectiveCabinInfo.baggage;
-    if (airline.tier === "budget" && effectiveClass === "economy") baggage = "Cabin bag only (checked bag extra)";
-
-    return {
-      id: `${airline.code}-${i}`,
-      airline: airline.name,
-      departure: from || "London Heathrow",
-      departureCode: fromCode,
-      arrival: `${toCity}, ${toCountry}`,
-      arrivalCode: toCode,
-      outboundDepart: slot.depart,
-      outboundArrive: arriveTime,
-      returnDepart,
-      returnArrive,
-      duration,
-      stops,
-      stopCity,
-      price,
-      currency: "GBP",
-      class: effectiveCabinInfo.label,
-      baggage,
-      bookingUrl: buildSkyscannerUrl(fromCode, toCode, startDate, returnDateStr, effectiveClass),
-    };
-  });
-
-  // Sort by price
   options.sort((a, b) => a.price - b.price);
   return options;
 }

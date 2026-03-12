@@ -189,6 +189,22 @@ export default function PlanPage() {
   });
   const filteredFlights = sortedFlights;
 
+  // Group flights by airline for the accordion view
+  const airlineGroups = filteredFlights.reduce<{ airline: string; flights: FlightOption[]; cheapest: number }[]>((groups, flight) => {
+    const existing = groups.find((g) => g.airline === flight.airline);
+    if (existing) {
+      existing.flights.push(flight);
+      existing.cheapest = Math.min(existing.cheapest, flight.price);
+    } else {
+      groups.push({ airline: flight.airline, flights: [flight], cheapest: flight.price });
+    }
+    return groups;
+  }, []);
+  // Sort airline groups by cheapest flight price
+  if (flightSort === "price_asc" || flightSort === "price_desc") {
+    airlineGroups.sort((a, b) => flightSort === "price_asc" ? a.cheapest - b.cheapest : b.cheapest - a.cheapest);
+  }
+
   const selectedFlight = result?.flights.find((f) => f.id === selectedFlightId) || result?.flights[0] || null;
 
   // ── Handlers ───────────────────────────────────────────────────
@@ -320,16 +336,16 @@ export default function PlanPage() {
 
   const collapseAll = () => setExpandedDays(new Set());
 
-  const toggleFlight = (id: string) => {
+  const toggleAirline = (airline: string) => {
     setExpandedFlights((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(airline)) next.delete(airline);
+      else next.add(airline);
       return next;
     });
   };
   const expandAllFlights = () => {
-    if (result) setExpandedFlights(new Set(result.flights.map((f: FlightOption) => f.id)));
+    setExpandedFlights(new Set(airlineGroups.map((g) => g.airline)));
   };
   const collapseAllFlights = () => setExpandedFlights(new Set());
 
@@ -609,10 +625,10 @@ export default function PlanPage() {
                 {result.flights.length} options found &mdash; select a flight to build your itinerary around
               </p>
               <button
-                onClick={expandedFlights.size === filteredFlights.length ? collapseAllFlights : expandAllFlights}
+                onClick={expandedFlights.size === airlineGroups.length ? collapseAllFlights : expandAllFlights}
                 className="text-sm text-primary hover:text-primary-dark font-medium transition-colors"
               >
-                {expandedFlights.size === filteredFlights.length ? "Collapse all" : "Expand all"}
+                {expandedFlights.size === airlineGroups.length ? "Collapse all" : "Expand all"}
               </button>
             </div>
 
@@ -634,137 +650,165 @@ export default function PlanPage() {
             </div>
 
             <div className="space-y-3">
-              {filteredFlights.length === 0 ? (
+              {airlineGroups.length === 0 ? (
                 <div className="text-center py-8 text-gray-400">
                   <Plane className="w-8 h-8 mx-auto mb-2 opacity-30" />
                   <p>No flights found for this route</p>
                 </div>
-              ) : filteredFlights.map((flight, i) => {
-                const isSelected = flight.id === selectedFlightId;
-                const isExpanded = expandedFlights.has(flight.id);
-                const cheapestPrice = Math.min(...filteredFlights.map((f) => f.price));
-                const isCheapest = flight.price === cheapestPrice;
+              ) : airlineGroups.map((group, gi) => {
+                const isExpanded = expandedFlights.has(group.airline);
+                const hasSelected = group.flights.some((f) => f.id === selectedFlightId);
+                const cheapestOverall = Math.min(...filteredFlights.map((f) => f.price));
+                const isCheapestAirline = group.cheapest === cheapestOverall;
+                const directCount = group.flights.filter((f) => f.stops === 0).length;
+
                 return (
                   <div
-                    key={flight.id}
+                    key={group.airline}
                     className={`rounded-2xl border-2 transition-all overflow-hidden ${
-                      isSelected
+                      hasSelected
                         ? "border-primary bg-primary/5 shadow-md"
                         : "border-gray-100 bg-white hover:border-gray-200 hover:shadow-sm"
                     }`}
                   >
-                    {/* Compact header — always visible */}
+                    {/* Airline header */}
                     <button
-                      onClick={() => toggleFlight(flight.id)}
+                      onClick={() => toggleAirline(group.airline)}
                       className="w-full text-left px-3 sm:px-5 py-3 sm:py-4 flex items-center justify-between gap-2 hover:bg-gray-50/50 transition-colors"
                     >
                       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${isSelected ? "bg-primary text-white" : "bg-gray-100 text-gray-500"}`}>
-                          {isSelected ? <Check className="w-3.5 h-3.5" /> : i + 1}
+                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${hasSelected ? "bg-primary text-white" : "bg-gray-100 text-gray-500"}`}>
+                          {hasSelected ? <Check className="w-3.5 h-3.5" /> : gi + 1}
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-semibold text-sm text-foreground">{flight.airline}</span>
-                            {isCheapest && (
-                              <span className="text-[9px] sm:text-xs bg-emerald-100 text-emerald-700 px-1.5 sm:px-2 py-0.5 rounded-full font-medium">Best</span>
+                            <span className="font-semibold text-sm text-foreground">{group.airline}</span>
+                            {isCheapestAirline && (
+                              <span className="text-[9px] sm:text-xs bg-emerald-100 text-emerald-700 px-1.5 sm:px-2 py-0.5 rounded-full font-medium">Best price</span>
                             )}
                           </div>
                           <span className="text-[11px] sm:text-xs text-gray-400">
-                            {flight.outboundDepart} → {flight.outboundArrive}
-                            {flight.stops > 0 && ` via ${flight.stopCity}`}
+                            {group.flights.length} flight{group.flights.length !== 1 ? "s" : ""}
+                            {directCount > 0 && ` · ${directCount} direct`}
                           </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                         <div className="text-right">
                           <div className="flex items-center gap-0.5">
+                            <span className="text-[10px] text-gray-400">from</span>
                             <PoundSterling className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-foreground" />
-                            <span className="text-lg sm:text-xl font-bold text-foreground">{flight.price}</span>
+                            <span className="text-lg sm:text-xl font-bold text-foreground">{group.cheapest}</span>
                           </div>
-                          <span className="text-[9px] sm:text-[10px] text-gray-400">{flight.stops === 0 ? "Direct" : `${flight.stops} stop`} · {flight.duration}</span>
+                          <span className="text-[9px] sm:text-[10px] text-gray-400">pp return</span>
                         </div>
                         <ChevronDown className={`w-4 h-4 sm:w-5 sm:h-5 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                       </div>
                     </button>
 
-                    {/* Expanded details */}
+                    {/* Expanded: individual flight options */}
                     {isExpanded && (
-                      <div className="px-3 sm:px-5 pb-4 sm:pb-5 border-t border-gray-50 pt-3 sm:pt-4">
-                        {/* Select flight button */}
-                        {!isSelected && (
-                          <button
-                            onClick={() => handleFlightSelect(flight.id)}
-                            className="mb-4 px-4 py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
-                          >
-                            {rebuildingItinerary ? "Updating itinerary..." : "Select this flight"}
-                          </button>
-                        )}
-
-                        {/* Flight times */}
-                        <div className="grid md:grid-cols-2 gap-4">
-                          {/* Outbound */}
-                          <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
-                            <div className="text-center min-w-[60px]">
-                              <p className="text-lg font-bold text-foreground">{flight.outboundDepart}</p>
-                              <p className="text-[10px] text-gray-400 font-mono">{flight.departureCode}</p>
-                            </div>
-                            <div className="flex-1 flex flex-col items-center px-2">
-                              <span className="text-[10px] text-gray-400">{flight.duration}</span>
-                              <div className="w-full flex items-center gap-1 my-1">
-                                <div className="w-1.5 h-1.5 rounded-full bg-teal" />
-                                <div className="h-px bg-gray-300 flex-1 relative">
-                                  {flight.stops > 0 && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-orange-400 border border-white" />}
+                      <div className="border-t border-gray-50">
+                        {group.flights.map((flight) => {
+                          const isSelected = flight.id === selectedFlightId;
+                          return (
+                            <div key={flight.id} className={`px-3 sm:px-5 py-3 sm:py-4 border-b border-gray-50 last:border-b-0 ${isSelected ? "bg-primary/5" : ""}`}>
+                              {/* Flight summary row */}
+                              <div className="flex items-center justify-between gap-2 mb-3">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <span className="font-bold text-foreground">{flight.outboundDepart}</span>
+                                    <span className="text-gray-400">→</span>
+                                    <span className="font-bold text-foreground">{flight.outboundArrive}</span>
+                                  </div>
+                                  <span className="text-[10px] sm:text-xs text-gray-400">
+                                    {flight.stops === 0 ? "Direct" : `1 stop via ${flight.stopCity}`} · {flight.duration}
+                                  </span>
                                 </div>
-                                <Plane className="w-3 h-3 text-teal" />
-                              </div>
-                              <span className="text-[10px] text-gray-400">{flight.stops === 0 ? "Direct" : `${flight.stops} stop`}</span>
-                            </div>
-                            <div className="text-center min-w-[60px]">
-                              <p className="text-lg font-bold text-foreground">{flight.outboundArrive}</p>
-                              <p className="text-[10px] text-gray-400 font-mono">{flight.arrivalCode}</p>
-                            </div>
-                          </div>
-
-                          {/* Return */}
-                          <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
-                            <div className="text-center min-w-[60px]">
-                              <p className="text-lg font-bold text-foreground">{flight.returnDepart}</p>
-                              <p className="text-[10px] text-gray-400 font-mono">{flight.arrivalCode}</p>
-                            </div>
-                            <div className="flex-1 flex flex-col items-center px-2">
-                              <span className="text-[10px] text-gray-400">{flight.duration}</span>
-                              <div className="w-full flex items-center gap-1 my-1">
-                                <div className="w-1.5 h-1.5 rounded-full bg-teal" />
-                                <div className="h-px bg-gray-300 flex-1 relative">
-                                  {flight.stops > 0 && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-orange-400 border border-white" />}
+                                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                                  <div className="flex items-center gap-0.5">
+                                    <PoundSterling className="w-3 h-3 text-foreground" />
+                                    <span className="text-base sm:text-lg font-bold text-foreground">{flight.price}</span>
+                                  </div>
                                 </div>
-                                <Plane className="w-3 h-3 text-teal rotate-180" />
                               </div>
-                              <span className="text-[10px] text-gray-400">{flight.stops === 0 ? "Direct" : `${flight.stops} stop`}</span>
-                            </div>
-                            <div className="text-center min-w-[60px]">
-                              <p className="text-lg font-bold text-foreground">{flight.returnArrive}</p>
-                              <p className="text-[10px] text-gray-400 font-mono">{flight.departureCode}</p>
-                            </div>
-                          </div>
-                        </div>
 
-                        {/* Baggage + class + booking */}
-                        <div className="flex items-center justify-between mt-3">
-                          <div className="flex items-center gap-4 text-xs text-gray-400">
-                            <span className="flex items-center gap-1"><BaggageClaim className="w-3 h-3" />{flight.baggage}</span>
-                            <span className="flex items-center gap-1"><Briefcase className="w-3 h-3" />{flight.class}</span>
-                          </div>
-                          <a
-                            href={flight.bookingUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-teal text-white text-xs font-semibold hover:bg-teal/90 transition-colors shadow-sm"
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                            Book on Skyscanner
-                          </a>
-                        </div>
+                              {/* Outbound + Return times */}
+                              <div className="grid md:grid-cols-2 gap-3 mb-3">
+                                <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-2.5">
+                                  <div className="text-center min-w-[50px]">
+                                    <p className="text-sm sm:text-base font-bold text-foreground">{flight.outboundDepart}</p>
+                                    <p className="text-[9px] sm:text-[10px] text-gray-400 font-mono">{flight.departureCode}</p>
+                                  </div>
+                                  <div className="flex-1 flex flex-col items-center px-1">
+                                    <div className="w-full flex items-center gap-1 my-0.5">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-teal" />
+                                      <div className="h-px bg-gray-300 flex-1 relative">
+                                        {flight.stops > 0 && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-orange-400 border border-white" />}
+                                      </div>
+                                      <Plane className="w-3 h-3 text-teal" />
+                                    </div>
+                                    <span className="text-[9px] text-gray-400">{flight.stops === 0 ? "Direct" : `${flight.stops} stop`}</span>
+                                  </div>
+                                  <div className="text-center min-w-[50px]">
+                                    <p className="text-sm sm:text-base font-bold text-foreground">{flight.outboundArrive}</p>
+                                    <p className="text-[9px] sm:text-[10px] text-gray-400 font-mono">{flight.arrivalCode}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-2.5">
+                                  <div className="text-center min-w-[50px]">
+                                    <p className="text-sm sm:text-base font-bold text-foreground">{flight.returnDepart}</p>
+                                    <p className="text-[9px] sm:text-[10px] text-gray-400 font-mono">{flight.arrivalCode}</p>
+                                  </div>
+                                  <div className="flex-1 flex flex-col items-center px-1">
+                                    <div className="w-full flex items-center gap-1 my-0.5">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-teal" />
+                                      <div className="h-px bg-gray-300 flex-1 relative">
+                                        {flight.stops > 0 && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-orange-400 border border-white" />}
+                                      </div>
+                                      <Plane className="w-3 h-3 text-teal rotate-180" />
+                                    </div>
+                                    <span className="text-[9px] text-gray-400">{flight.stops === 0 ? "Direct" : `${flight.stops} stop`}</span>
+                                  </div>
+                                  <div className="text-center min-w-[50px]">
+                                    <p className="text-sm sm:text-base font-bold text-foreground">{flight.returnArrive}</p>
+                                    <p className="text-[9px] sm:text-[10px] text-gray-400 font-mono">{flight.departureCode}</p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Actions */}
+                              <div className="flex items-center justify-between flex-wrap gap-2">
+                                <div className="flex items-center gap-3 text-[10px] sm:text-xs text-gray-400">
+                                  <span className="flex items-center gap-1"><BaggageClaim className="w-3 h-3" />{flight.baggage}</span>
+                                  <span className="flex items-center gap-1"><Briefcase className="w-3 h-3" />{flight.class}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {!isSelected && (
+                                    <button
+                                      onClick={() => handleFlightSelect(flight.id)}
+                                      className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
+                                    >
+                                      {rebuildingItinerary ? "Updating..." : "Select"}
+                                    </button>
+                                  )}
+                                  {isSelected && (
+                                    <span className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold">Selected</span>
+                                  )}
+                                  <a
+                                    href={flight.bookingUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-teal text-white text-xs font-semibold hover:bg-teal/90 transition-colors"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                    Book
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
