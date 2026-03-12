@@ -570,7 +570,7 @@ export default function PlanPage() {
 
       {/* ── Results ── */}
       {result && (
-        <section id="itinerary-results" className="max-w-5xl mx-auto px-6 py-12 scroll-mt-20">
+        <section id="itinerary-results" className="max-w-5xl mx-auto px-3 sm:px-6 py-8 sm:py-12 scroll-mt-20">
 
           {/* ── Tabs ── */}
           <div className="flex gap-1 bg-gray-100 rounded-2xl p-1 mb-8">
@@ -604,7 +604,7 @@ export default function PlanPage() {
               </div>
               Flight Options
             </h2>
-            <div className="flex items-center justify-between mb-4 ml-[52px]">
+            <div className="flex items-center justify-between mb-4 ml-0 sm:ml-[52px]">
               <p className="text-sm text-gray-400">
                 {result.flights.length} options found &mdash; select a flight to build your itinerary around
               </p>
@@ -617,7 +617,7 @@ export default function PlanPage() {
             </div>
 
             {/* Sort options */}
-            <div className="flex items-center gap-2 mb-4 ml-[52px] flex-wrap">
+            <div className="flex items-center gap-2 mb-4 ml-0 sm:ml-[52px] flex-wrap">
               {FLIGHT_SORTS.map(({ value, label }) => (
                   <button
                     key={value}
@@ -656,40 +656,40 @@ export default function PlanPage() {
                     {/* Compact header — always visible */}
                     <button
                       onClick={() => toggleFlight(flight.id)}
-                      className="w-full text-left px-5 py-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors"
+                      className="w-full text-left px-3 sm:px-5 py-3 sm:py-4 flex items-center justify-between gap-2 hover:bg-gray-50/50 transition-colors"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${isSelected ? "bg-primary text-white" : "bg-gray-100 text-gray-500"}`}>
-                          {isSelected ? <Check className="w-4 h-4" /> : i + 1}
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${isSelected ? "bg-primary text-white" : "bg-gray-100 text-gray-500"}`}>
+                          {isSelected ? <Check className="w-3.5 h-3.5" /> : i + 1}
                         </div>
-                        <div>
-                          <span className="font-semibold text-foreground">{flight.airline}</span>
-                          <span className="text-xs text-gray-400 ml-2">
-                            {flight.outboundDepart} &rarr; {flight.outboundArrive}
-                          </span>
-                          {flight.stops > 0 && (
-                            <span className="text-xs text-gray-400 ml-1">via {flight.stopCity}</span>
-                          )}
-                        </div>
-                        {isCheapest && (
-                          <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium hidden sm:inline">Best price</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <div className="flex items-center gap-1">
-                            <PoundSterling className="w-3.5 h-3.5 text-foreground" />
-                            <span className="text-xl font-bold text-foreground">{flight.price}</span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-sm text-foreground">{flight.airline}</span>
+                            {isCheapest && (
+                              <span className="text-[9px] sm:text-xs bg-emerald-100 text-emerald-700 px-1.5 sm:px-2 py-0.5 rounded-full font-medium">Best</span>
+                            )}
                           </div>
-                          <span className="text-[10px] text-gray-400">{flight.stops === 0 ? "Direct" : `${flight.stops} stop`} &middot; {flight.duration}</span>
+                          <span className="text-[11px] sm:text-xs text-gray-400">
+                            {flight.outboundDepart} → {flight.outboundArrive}
+                            {flight.stops > 0 && ` via ${flight.stopCity}`}
+                          </span>
                         </div>
-                        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                      </div>
+                      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                        <div className="text-right">
+                          <div className="flex items-center gap-0.5">
+                            <PoundSterling className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-foreground" />
+                            <span className="text-lg sm:text-xl font-bold text-foreground">{flight.price}</span>
+                          </div>
+                          <span className="text-[9px] sm:text-[10px] text-gray-400">{flight.stops === 0 ? "Direct" : `${flight.stops} stop`} · {flight.duration}</span>
+                        </div>
+                        <ChevronDown className={`w-4 h-4 sm:w-5 sm:h-5 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                       </div>
                     </button>
 
                     {/* Expanded details */}
                     {isExpanded && (
-                      <div className="px-5 pb-5 border-t border-gray-50 pt-4">
+                      <div className="px-3 sm:px-5 pb-4 sm:pb-5 border-t border-gray-50 pt-3 sm:pt-4">
                         {/* Select flight button */}
                         {!isSelected && (
                           <button
@@ -807,10 +807,10 @@ export default function PlanPage() {
                   {/* Day Header */}
                   <button
                     onClick={() => toggleDay(day.day)}
-                    className="w-full px-6 py-5 flex items-center justify-between hover:bg-gray-50/50 transition-colors"
+                    className="w-full px-3 sm:px-6 py-4 sm:py-5 flex items-center justify-between hover:bg-gray-50/50 transition-colors"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-lg shrink-0">
+                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-base sm:text-lg shrink-0">
                         {day.day}
                       </div>
                       <div className="text-left">
@@ -840,7 +840,7 @@ export default function PlanPage() {
 
                   {/* Day Activities */}
                   {expandedDays.has(day.day) && (
-                    <div className="px-6 pb-6 space-y-3 border-t border-gray-50">
+                    <div className="px-3 sm:px-6 pb-4 sm:pb-6 space-y-3 border-t border-gray-50">
                       {day.activities.map((activity, i) => {
                         const Icon = categoryIcons[activity.category] || Compass;
                         const colorClass = categoryColors[activity.category] || "bg-gray-50 text-gray-600 border-gray-200";
@@ -865,26 +865,26 @@ export default function PlanPage() {
                         };
 
                         return (
-                          <div key={i} className="flex gap-4 pt-4">
+                          <div key={i} className="flex gap-2 sm:gap-4 pt-4">
                             {/* Time column */}
-                            <div className="w-14 shrink-0 pt-1 text-right">
-                              <span className="text-sm font-mono font-bold text-foreground">{activity.time}</span>
+                            <div className="w-11 sm:w-14 shrink-0 pt-1 text-right">
+                              <span className="text-xs sm:text-sm font-mono font-bold text-foreground">{activity.time}</span>
                             </div>
 
                             {/* Content */}
-                            <div className={`flex-1 rounded-xl p-4 border ${colorClass}`}>
-                              <div className="flex items-start justify-between gap-2 mb-1">
-                                <div className="flex items-center gap-2 min-w-0">
+                            <div className={`flex-1 min-w-0 rounded-xl p-3 sm:p-4 border ${colorClass}`}>
+                              <div className="flex flex-wrap items-start gap-1.5 mb-1">
+                                <div className="flex items-center gap-1.5 min-w-0 flex-1">
                                   <Icon className="w-4 h-4 shrink-0" />
-                                  <h4 className="font-semibold text-sm truncate">{activity.title}</h4>
+                                  <h4 className="font-semibold text-xs sm:text-sm break-words">{activity.title}</h4>
                                 </div>
-                                <div className="flex items-center gap-1.5 shrink-0">
+                                <div className="flex items-center gap-1 flex-wrap">
                                   {foodTier && (
-                                    <span className={`text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap font-semibold ${tierBadgeColors[foodTier] || "bg-gray-100 text-gray-600"}`}>
+                                    <span className={`text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full whitespace-nowrap font-semibold ${tierBadgeColors[foodTier] || "bg-gray-100 text-gray-600"}`}>
                                       {foodTier}
                                     </span>
                                   )}
-                                  <span className={`text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap font-medium ${colorClass}`}>
+                                  <span className={`text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full whitespace-nowrap font-medium ${colorClass}`}>
                                     {label}
                                   </span>
                                 </div>
@@ -892,9 +892,9 @@ export default function PlanPage() {
                               <p className="text-xs text-gray-600 leading-relaxed mb-2">
                                 {activity.description}
                               </p>
-                              <div className="flex flex-wrap items-center gap-3">
+                              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                                 {tipText && (
-                                  <span className="text-[11px] text-gray-400 italic leading-tight">
+                                  <span className="text-[10px] sm:text-[11px] text-gray-400 italic leading-tight">
                                     {tipText}
                                   </span>
                                 )}
